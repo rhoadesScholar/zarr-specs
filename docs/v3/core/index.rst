@@ -249,6 +249,12 @@ The following figure illustrates the first part of the terminology:
     20, then the shape of the array_ is (100, 20). A shape can be the empty
     tuple in the case of zero-dimension arrays (scalars).
 
+    Along each dimension_ the elements_ of an array_ occupy a half-open
+    interval of integer coordinates, the *bounds* of that dimension_:
+    ``[start, stop)``, with length ``stop - start``. The array metadata
+    gives either the shape, in which case ``start`` is 0 along every
+    dimension_, or the bounds explicitly (see :ref:`array-metadata-bounds`).
+
 .. _element:
 .. _elements:
 
@@ -256,7 +262,8 @@ The following figure illustrates the first part of the terminology:
 
     An array_ contains zero or more elements. Each element is
     identified by a tuple of integer coordinates, one for each
-    dimension_ of the array_. If all dimensions_ of an array_ have
+    dimension_ of the array_, each within the bounds of its dimension_;
+    coordinates need not start at 0. If all dimensions_ of an array_ have
     finite length, then the number of elements in the array_ is given
     by the product of the dimension_ lengths.
 
@@ -428,6 +435,9 @@ underlying store_:
     * - `/foo/baz`
       - `(1, 0)`
       - `foo/baz/c/1/0`
+    * - `/foo/baz`
+      - `(-1, 0)`
+      - `foo/baz/c/-1/0`
 
 .. note::
 
@@ -468,7 +478,7 @@ Mandatory
 ^^^^^^^^^
 
 This document must contain a single object with the following
-mandatory names:
+mandatory names (of ``shape`` and ``bounds``, exactly one):
 
 .. _array-metadata-zarr-format:
 
@@ -494,7 +504,33 @@ mandatory names:
     An array of integers providing the length of each dimension of the
     Zarr array. For example, a value ``[10, 20]`` indicates a
     two-dimensional Zarr array, where the first dimension has length
-    10 and the second dimension has length 20.
+    10 and the second dimension has length 20. The coordinates of the
+    elements along each dimension then run from 0 to the length minus 1.
+
+    Exactly one of ``shape`` and ``bounds`` must be present.
+
+.. _array-metadata-bounds:
+
+``bounds``
+""""""""""
+
+    An array with one entry per dimension of the Zarr array, each entry a
+    two-element array of integers ``[start, stop]`` with ``start <= stop``.
+    The elements along that dimension have the coordinates ``start``
+    through ``stop - 1``, so the length of the dimension is
+    ``stop - start`` and may be 0. For example, ``[[-3, 7], [0, 20]]``
+    indicates a two-dimensional Zarr array whose first dimension has
+    length 10 with coordinates -3 to 6, and whose second dimension has
+    length 20 with coordinates 0 to 19. A zero-dimensional array has
+    ``"bounds": []``.
+
+    Exactly one of ``shape`` and ``bounds`` must be present. ``shape`` is
+    equivalent to ``bounds`` with ``start`` 0 along every dimension.
+    Writers SHOULD use ``shape`` when that is the case and the chunk grid
+    has no origin, or an origin of 0 along every dimension, because
+    implementations of earlier versions of this specification do not read
+    ``bounds``. Where this specification refers to the shape of an array
+    or to the length of a dimension, the length ``stop - start`` applies.
 
 .. _array-metadata-data-type:
 
@@ -529,12 +565,16 @@ mandatory names:
     as defined in this specification, then the value must be an object with the
     names ``name`` and ``configuration``. The value of ``name`` must be the
     string ``"regular"``, and the value of ``configuration`` an object with the
-    member ``chunk_shape``. ``chunk_shape`` must be an array of
-    integers providing the lengths of the chunk along each dimension of the
-    array.  For example,
+    member ``chunk_shape`` and, only when the array metadata gives
+    ``bounds``, the optional member ``origin``. ``chunk_shape`` must be an
+    array of integers providing the lengths of the chunk along each
+    dimension of the array. ``origin``, if present, must be an array of
+    integers giving the coordinate at which the chunk with grid index 0
+    begins along each dimension; see :ref:`regular-chunkgrid`.  For example,
     ``{"name": "regular", "configuration": {"chunk_shape": [2, 5]}}``
     means a regular grid where the chunks have length 2 along the first
-    dimension and length 5 along the second dimension.
+    dimension and length 5 along the second dimension, aligned at
+    coordinate 0.
 
 
 .. _array-metadata-chunk-key-encoding:
@@ -633,7 +673,7 @@ The following members are optional:
 """""""""""""""""""
 
     Specifies dimension names, e.g. ``["x", "y", "z"]``.  If specified, must be
-    an array of strings or null objects with the same length as ``shape``.  An
+    an array of strings or null objects with one entry per dimension.  An
     unnamed dimension is indicated by the null object.  If ``dimension_names`` is
     not specified, all dimensions are unnamed.
 
@@ -726,6 +766,42 @@ above, but using a (currently made up) extension data type::
             }
         }],
         "fill_value": null,
+    }
+
+The following example illustrates the first array after it has been grown by 3
+rows before its first row. Its metadata gives ``bounds`` in place of ``shape``:
+the elements occupy coordinates -3 to 9999 along the first dimension and 0 to
+999 along the second. The chunk with grid index 0 still begins at coordinate 0,
+so every chunk of the original array keeps its key, and the new rows are in the
+chunks with grid index -1 along the first dimension, stored under the keys
+``c/-1/0`` through ``c/-1/9``::
+
+    {
+        "zarr_format": 3,
+        "node_type": "array",
+        "bounds": [[-3, 10000], [0, 1000]],
+        "dimension_names": ["rows", "columns"],
+        "data_type": "float64",
+        "chunk_grid": {
+            "name": "regular",
+            "configuration": {
+                "chunk_shape": [1000, 100],
+                "origin": [0, 0]
+            }
+        },
+        "chunk_key_encoding": {
+            "name": "default",
+            "configuration": {
+                "separator": "/"
+            }
+        },
+        "codecs": [{
+            "name": "bytes",
+            "configuration": {
+                "endian": "little"
+            }
+        }],
+        "fill_value": "NaN"
     }
 
 .. note::
@@ -924,9 +1000,11 @@ Chunk grids
 
 A chunk grid defines a set of chunks which contain the elements of an
 array. The chunks of a grid form a tessellation of the array space,
-which is a space defined by the dimensionality and shape of the
+which is a space defined by the dimensionality and bounds of the
 array. This means that every element of the array is a member of one
-chunk, and there are no gaps or overlaps between chunks.
+chunk, and there are no gaps or overlaps between chunks. Chunks are
+addressed by integer grid indices, which may be negative where the grid
+allows it.
 
 In general there are different possible types of grids. Those defined
 under the core specification can be found under :ref:`chunk-grid-list`.
@@ -1718,6 +1796,12 @@ can also allow the user to choose to delete previous data explicitly when
 increasing the array (by writing the fill value into partial chunks and deleting
 others), but this should not be the default behaviour.
 
+An array whose metadata gives ``bounds`` can also grow or shrink before its
+first element, by lowering or raising ``start`` along a dimension. The grid
+indices of existing chunks do not change, so no chunk is moved or rewritten,
+and the same considerations apply to chunks that already exist in the new
+area.
+
 
 Comparison with Zarr v2
 =======================
@@ -1751,6 +1835,13 @@ Change log
 All notable and possibly implementation-affecting changes to this specification
 are documented in this section, grouped by the specification status and ordered
 by time.
+
+3.2 (proposed)
+--------------
+
+- Added ``bounds`` as an alternative to ``shape``, so that the coordinates of
+  an array may start at any integer, and an optional ``origin`` to the regular
+  chunk grid. Chunk grid indices may be negative. `ZEP0012 — Explicit array bounds <https://zarr.dev/zeps/draft/ZEP0012.html>`_.
 
 3.1
 ---

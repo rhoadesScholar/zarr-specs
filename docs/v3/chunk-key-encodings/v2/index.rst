@@ -45,6 +45,11 @@ for the chunk at grid index (1, 23, 45) is the string ``"1.23.45"``.  With a
 separator of ``/``, the identifier is the string ``"1/23/45"``. The chunk at
 grid index (-1, 0, 45) has the identifier ``"-1.0.45"``.
 
+.. note:: The lexicographic order of keys is not the numeric order of grid
+    indices, and with negative indices the two also differ in direction:
+    ``-2`` sorts after ``-1``, and both sort before ``0``. An
+    implementation that lists keys by range has to allow for this.
+
 For chunk grids with 0 dimensions, the single chunk has the key ``"0"``.
 
 .. warning::

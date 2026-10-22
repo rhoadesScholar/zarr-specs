@@ -6,7 +6,7 @@ Zarr core specification
 =======================
 
 Version:
-    3.1
+    3.2
 Specification URI:
     https://zarr-specs.readthedocs.io/en/latest/v3/core/
 
@@ -20,6 +20,7 @@ Editors:
 Corresponding ZEPs:
     * `ZEP0001 — Zarr specification version 3 <https://zarr.dev/zeps/accepted/ZEP0001.html>`_
     * `ZEP0009 — Zarr extension naming <https://zarr.dev/zeps/draft/ZEP0009.html>`_
+    * `ZEP0012 — Explicit array bounds <https://zarr.dev/zeps/draft/ZEP0012.html>`_
 
 Issue tracking:
     `GitHub issues <https://github.com/zarr-developers/zarr-specs/labels/core-protocol-v3.1>`_
@@ -262,7 +263,8 @@ The following figure illustrates the first part of the terminology:
 
     An array_ contains zero or more elements. Each element is
     identified by a tuple of integer coordinates, one for each
-    dimension_ of the array_, each within the bounds of its dimension_;
+    dimension_ of the array_, each within the :ref:`bounds
+    <array-metadata-bounds>` of its dimension_;
     coordinates need not start at 0. If all dimensions_ of an array_ have
     finite length, then the number of elements in the array_ is given
     by the product of the dimension_ lengths.
@@ -506,8 +508,7 @@ mandatory names (of ``shape`` and ``bounds``, exactly one):
     two-dimensional Zarr array, where the first dimension has length
     10 and the second dimension has length 20. The coordinates of the
     elements along each dimension then run from 0 to the length minus 1.
-
-    Exactly one of ``shape`` and ``bounds`` must be present.
+    An array may give :ref:`array-metadata-bounds` instead of ``shape``.
 
 .. _array-metadata-bounds:
 
@@ -526,8 +527,8 @@ mandatory names (of ``shape`` and ``bounds``, exactly one):
 
     Exactly one of ``shape`` and ``bounds`` must be present. ``shape`` is
     equivalent to ``bounds`` with ``start`` 0 along every dimension.
-    Writers SHOULD use ``shape`` when that is the case and the chunk grid
-    has no origin, or an origin of 0 along every dimension, because
+    Writers SHOULD use ``shape``, and omit ``origin``, when that is the
+    case and the chunk grid's origin is 0 along every dimension, because
     implementations of earlier versions of this specification do not read
     ``bounds``. Where this specification refers to the shape of an array
     or to the length of a dimension, the length ``stop - start`` applies.
@@ -785,8 +786,7 @@ chunks with grid index -1 along the first dimension, stored under the keys
         "chunk_grid": {
             "name": "regular",
             "configuration": {
-                "chunk_shape": [1000, 100],
-                "origin": [0, 0]
+                "chunk_shape": [1000, 100]
             }
         },
         "chunk_key_encoding": {
@@ -1000,8 +1000,8 @@ Chunk grids
 
 A chunk grid defines a set of chunks which contain the elements of an
 array. The chunks of a grid form a tessellation of the array space,
-which is a space defined by the dimensionality and bounds of the
-array. This means that every element of the array is a member of one
+which is a space defined by the dimensionality and :ref:`bounds
+<array-metadata-bounds>` of the array. This means that every element of the array is a member of one
 chunk, and there are no gaps or overlaps between chunks. Chunks are
 addressed by integer grid indices, which may be negative where the grid
 allows it.

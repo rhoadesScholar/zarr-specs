@@ -47,7 +47,9 @@ aligned with its origin, and the grid extends in both directions from it.
 Where the bounds of the array along a dimension do not fall on chunk
 boundaries, the grid overhangs the edge of the array space: the first
 chunk along that dimension may begin before the first element, and the
-last may end after the last element.
+last may end after the last element. Positions of such a chunk outside
+the bounds of the array are not elements of the array, and writers SHOULD
+store the fill value in them.
 
 Along a dimension with bounds [`start`, `stop`), chunk size `d` and origin
 `o`, the grid runs from grid index floor((`start` - `o`) / `d`) through
@@ -65,7 +67,7 @@ dimension.
 .. list-table:: Regular Grid Example
     :header-rows: 1
 
-    * - Array Shape
+    * - Array extent
       - Chunk Shape
       - Chunk Grid Shape
       - Notes
@@ -77,13 +79,13 @@ dimension.
       - (5, 20, 400)
       - (3, 10, 8)
       - Grid indices run from -1 to 1 on the 1st dimension; the first chunk
-        overhangs the array by 2 elements.
+        overhangs the array by 2 elements and the last by 3.
 
 An element of an array with coordinates (`c`, `b`, `a`, ...) will
 occur within the chunk at grid index ((`c` - `oz`) // `dz`, (`b` - `oy`) //
 `dy`, (`a` - `ox`) // `dx`, ...), where "//" is the floor division
-operator, rounding toward negative infinity. The element will have
-coordinates ((`c` - `oz`) % `dz`, (`b` - `oy`) % `dy`, (`a` - `ox`) % `dx`,
+operator, rounding toward negative infinity. The element will be at
+position ((`c` - `oz`) % `dz`, (`b` - `oy`) % `dy`, (`a` - `ox`) % `dx`,
 ...) within that chunk, where "%" is the modulo operator whose result takes
 the sign of the divisor, so that both are well defined below the origin.
 For example, if a 3 dimensional array has shape (10, 200, 3000), and has
@@ -106,11 +108,12 @@ Configuration
 ``origin``
     Optional. An array of integers, one per dimension, giving the coordinate
     in the array space at which the chunk with grid index 0 begins along
-    each dimension. It MAY only be present when the array metadata gives
-    :ref:`bounds <array-metadata-bounds>` rather than ``shape``; when
+    each dimension. It MUST NOT be present unless the array metadata gives
+    :ref:`bounds <array-metadata-bounds>`, and an implementation MUST
+    refuse metadata that gives ``shape`` together with ``origin``. When
     absent, the origin is 0 along every dimension. Implementations of
     version 1.0 of this grid do not read ``origin`` and align the grid at
-    0, which is why a non-zero origin requires ``bounds``, which those
+    0, which is why ``origin`` requires ``bounds``, which those
     implementations refuse.
 
 Lowering or raising ``start`` in the array's ``bounds`` along a dimension,

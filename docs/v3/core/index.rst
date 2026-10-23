@@ -480,7 +480,7 @@ Mandatory
 ^^^^^^^^^
 
 This document must contain a single object with the following
-mandatory names (of ``shape`` and ``bounds``, exactly one):
+names; of ``shape`` and ``bounds``, exactly one must be present:
 
 .. _array-metadata-zarr-format:
 

@@ -90,8 +90,8 @@ position ((`c` - `oz`) % `dz`, (`b` - `oy`) % `dy`, (`a` - `ox`) % `dx`,
 the sign of the divisor, so that both are well defined below the origin.
 For example, if a 3 dimensional array has shape (10, 200, 3000), and has
 chunk shape (5, 20, 400), then the element of the array with coordinates
-(7, 150, 900) is contained within the chunk at grid index (1, 7, 2) and has
-coordinates (2, 10, 100) within that chunk. With bounds [-3, 7) along the
+(7, 150, 900) is contained within the chunk at grid index (1, 7, 2) and is at
+position (2, 10, 100) within that chunk. With bounds [-3, 7) along the
 first dimension and an origin of 0, the element with coordinate -3 along
 that dimension is in the chunk with grid index -1, at position 2 within it.
 
@@ -111,10 +111,10 @@ Configuration
     each dimension. It MUST NOT be present unless the array metadata gives
     :ref:`bounds <array-metadata-bounds>`, and an implementation MUST
     refuse metadata that gives ``shape`` together with ``origin``. When
-    absent, the origin is 0 along every dimension. Implementations of
-    version 1.0 of this grid do not read ``origin`` and align the grid at
-    0, which is why ``origin`` requires ``bounds``, which those
-    implementations refuse.
+    absent, the origin is 0 along every dimension. An implementation of
+    version 1.0 of this grid may accept the configuration and ignore
+    ``origin``, aligning the grid at 0; ``origin`` is therefore permitted
+    only beside ``bounds``, which such an implementation refuses.
 
 Lowering or raising ``start`` in the array's ``bounds`` along a dimension,
 leaving ``origin`` alone, grows or shrinks the array before its first element

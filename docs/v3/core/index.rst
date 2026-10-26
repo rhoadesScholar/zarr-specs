@@ -515,23 +515,29 @@ names; of ``shape`` and ``bounds``, exactly one must be present:
 ``bounds``
 """"""""""
 
-    An array with one entry per dimension of the Zarr array, each entry a
-    two-element array of integers ``[start, stop]`` with ``start <= stop``.
-    The elements along that dimension have the coordinates ``start``
-    through ``stop - 1``, so the length of the dimension is
-    ``stop - start`` and may be 0. For example, ``[[-3, 7], [0, 20]]``
-    indicates a two-dimensional Zarr array whose first dimension has
-    length 10 with coordinates -3 to 6, and whose second dimension has
-    length 20 with coordinates 0 to 19. A zero-dimensional array has
-    ``"bounds": []``.
+    An object with two members, ``inclusive_min`` and ``exclusive_max``,
+    each an array of integers with one entry per dimension of the Zarr
+    array. The two arrays must have the same length, and
+    ``inclusive_min[i] <= exclusive_max[i]`` for every dimension ``i``.
+    Writing ``start`` and ``stop`` for the entries along a dimension, the
+    elements along that dimension have the coordinates ``start`` through
+    ``stop - 1``, so the length of the dimension is ``stop - start`` and
+    may be 0. For example,
+    ``{"inclusive_min": [-3, 0], "exclusive_max": [7, 20]}`` indicates a
+    two-dimensional Zarr array whose first dimension has length 10 with
+    coordinates -3 to 6, and whose second dimension has length 20 with
+    coordinates 0 to 19. A zero-dimensional array has
+    ``"bounds": {"inclusive_min": [], "exclusive_max": []}``.
 
     Exactly one of ``shape`` and ``bounds`` must be present. ``shape`` is
-    equivalent to ``bounds`` with ``start`` 0 along every dimension.
+    equivalent to ``bounds`` with every entry of ``inclusive_min`` 0 and
+    ``exclusive_max`` equal to ``shape``.
     Writers SHOULD use ``shape``, and omit ``origin``, when that is the
     case and the chunk grid's origin is 0 along every dimension, because
     implementations of earlier versions of this specification do not read
-    ``bounds``. Where this specification refers to the shape of an array
-    or to the length of a dimension, the length ``stop - start`` applies.
+    ``bounds``. The number of dimensions is the length of ``inclusive_min``;
+    where this specification refers to the shape of an array or to the
+    length of a dimension, the length ``stop - start`` applies.
 
 .. _array-metadata-data-type:
 
@@ -780,7 +786,7 @@ chunks with grid index -1 along the first dimension, stored under the keys
     {
         "zarr_format": 3,
         "node_type": "array",
-        "bounds": [[-3, 10000], [0, 1000]],
+        "bounds": {"inclusive_min": [-3, 0], "exclusive_max": [10000, 1000]},
         "dimension_names": ["rows", "columns"],
         "data_type": "float64",
         "chunk_grid": {
@@ -1797,7 +1803,7 @@ increasing the array (by writing the fill value into partial chunks and deleting
 others), but this should not be the default behaviour.
 
 An array whose metadata gives ``bounds`` can also grow or shrink before its
-first element, by lowering or raising ``start`` along a dimension. The grid
+first element, by lowering or raising ``inclusive_min`` along a dimension. The grid
 indices of existing chunks do not change, so no chunk is moved or rewritten,
 and the same considerations apply to chunks that already exist in the new
 area.

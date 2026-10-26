@@ -51,7 +51,8 @@ last may end after the last element. Positions of such a chunk outside
 the bounds of the array are not elements of the array, and writers SHOULD
 store the fill value in them.
 
-Along a dimension with bounds [`start`, `stop`), chunk size `d` and origin
+Along a dimension with bounds [`start`, `stop`) (the array's ``inclusive_min``
+and ``exclusive_max`` entries for that dimension), chunk size `d` and origin
 `o`, the grid runs from grid index floor((`start` - `o`) / `d`) through
 floor((`stop` - 1 - `o`) / `d`) when `stop` > `start`, and has no chunks
 when the dimension has length 0. For an array whose metadata gives a
@@ -116,17 +117,18 @@ Configuration
     ``origin``, aligning the grid at 0; ``origin`` is therefore permitted
     only beside ``bounds``, which such an implementation refuses.
 
-Lowering or raising ``start`` in the array's ``bounds`` along a dimension,
+Lowering or raising ``inclusive_min`` in the array's ``bounds`` along a dimension,
 leaving ``origin`` alone, grows or shrinks the array before its first element
 without changing the grid index, and so the store key, of any existing chunk.
-Adding the same amount to ``origin`` and to both entries of the bounds along a
+Adding the same amount to ``origin``, ``inclusive_min`` and ``exclusive_max`` along a
 dimension translates the coordinates of the array, again without changing any
 chunk's key.
 
 .. note:: Chunks at the border of an array always have the full chunk size, even when
    the array only covers parts of it. For example, having an array with ``"shape": [30, 30]`` and
    ``"chunk_shape": [16, 16]``, the chunk ``0,1`` would also contain unused values for the indices
-   ``0-16, 30-31``. Likewise, with ``"bounds": [[-3, 27], [0, 30]]`` the chunk ``-1,0`` covers
+   ``0-16, 30-31``. Likewise, with
+   ``"bounds": {"inclusive_min": [-3, 0], "exclusive_max": [27, 30]}`` the chunk ``-1,0`` covers
    coordinates -16 to -1 along the first dimension, of which only -3 to -1 are elements of the
    array. When writing such chunks it is recommended to use the current fill value
    for elements outside the bounds of the array.

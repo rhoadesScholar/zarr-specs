@@ -528,6 +528,9 @@ names; of ``shape`` and ``bounds``, exactly one must be present:
     coordinates -3 to 6, and whose second dimension has length 20 with
     coordinates 0 to 19. A zero-dimensional array has
     ``"bounds": {"inclusive_min": [], "exclusive_max": []}``.
+    The entries of ``inclusive_min`` and ``exclusive_max`` MUST be
+    representable as signed 64-bit integers, and MUST be chosen so that
+    the length of every dimension is as well.
 
     Exactly one of ``shape`` and ``bounds`` must be present. ``shape`` is
     equivalent to ``bounds`` with every entry of ``inclusive_min`` 0 and

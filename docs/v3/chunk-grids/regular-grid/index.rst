@@ -116,6 +116,9 @@ Configuration
     version 1.0 of this grid may accept the configuration and ignore
     ``origin``, aligning the grid at 0; ``origin`` is therefore permitted
     only beside ``bounds``, which such an implementation refuses.
+    The entries of ``origin`` MUST be representable as signed 64-bit
+    integers, and MUST be chosen so that every chunk grid index of the
+    array is as well.
 
 Lowering or raising ``inclusive_min`` in the array's ``bounds`` along a dimension,
 leaving ``origin`` alone, grows or shrinks the array before its first element
